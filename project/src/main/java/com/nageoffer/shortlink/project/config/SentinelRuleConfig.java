@@ -28,7 +28,7 @@ import java.util.List;
 
 /**
  * 初始化限流配置
- * 公众号：马丁玩编程，回复：加群，添加马哥微信（备注：link）获取项目资料
+
  */
 @Component
 public class SentinelRuleConfig implements InitializingBean {
@@ -39,7 +39,7 @@ public class SentinelRuleConfig implements InitializingBean {
         FlowRule createOrderRule = new FlowRule();
         createOrderRule.setResource("create_short-link");
         createOrderRule.setGrade(RuleConstant.FLOW_GRADE_QPS);
-        createOrderRule.setCount(1);
+        createOrderRule.setCount(10);
         rules.add(createOrderRule);
         FlowRuleManager.loadRules(rules);
     }

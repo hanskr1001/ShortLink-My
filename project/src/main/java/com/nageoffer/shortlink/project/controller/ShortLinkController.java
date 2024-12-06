@@ -34,6 +34,7 @@ import com.nageoffer.shortlink.project.service.ShortLinkService;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,7 +46,7 @@ import java.util.List;
 
 /**
  * 短链接控制层
- * 公众号：马丁玩编程，回复：加群，添加马哥微信（备注：link）获取项目资料
+
  */
 @RestController
 @RequiredArgsConstructor
@@ -105,6 +106,14 @@ public class ShortLinkController {
     @GetMapping("/api/short-link/v1/page")
     public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
         return Results.success(shortLinkService.pageShortLink(requestParam));
+    }
+
+    /**
+     * 分页查询短链接
+     */
+    @GetMapping("/api/short-link/test/page")
+    public Result<IPage<ShortLinkPageRespDTO>> pageShortLinkTest(ShortLinkPageReqDTO requestParm){
+        return Results.success(shortLinkService.pageShortLinkTest(requestParm));
     }
 
     /**

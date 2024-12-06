@@ -74,14 +74,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -96,7 +89,6 @@ import static com.nageoffer.shortlink.project.common.constant.RedisKeyConstant.S
 
 /**
  * 短链接接口实现层
- * 公众号：马丁玩编程，回复：加群，添加马哥微信（备注：link）获取项目资料
  */
 @Slf4j
 @Service
@@ -145,9 +137,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .gid(requestParam.getGid())
                 .build();
         try {
-            // 短链接项目有多少数据？如何解决海量数据存储？详情查看：https://nageoffer.com/shortlink/question
+            // 短链接项目有多少数据？如何解决海量数据存储？
             baseMapper.insert(shortLinkDO);
-            // 短链接数据库分片键是如何考虑的？详情查看：https://nageoffer.com/shortlink/question
+            // 短链接数据库分片键是如何考虑的？
             shortLinkGotoMapper.insert(linkGotoDO);
         } catch (DuplicateKeyException ex) {
             // 首先判断是否存在布隆过滤器，如果不存在直接新增
@@ -156,13 +148,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
             throw new ServiceException(String.format("短链接：%s 生成重复", fullShortUrl));
         }
-        // 项目中短链接缓存预热是怎么做的？详情查看：https://nageoffer.com/shortlink/question
+        // 项目中短链接缓存预热是怎么做的？
         stringRedisTemplate.opsForValue().set(
                 String.format(GOTO_SHORT_LINK_KEY, fullShortUrl),
                 requestParam.getOriginUrl(),
                 LinkUtil.getLinkCacheValidTime(requestParam.getValidDate()), TimeUnit.MILLISECONDS
         );
-        // 删除短链接后，布隆过滤器如何删除？详情查看：https://nageoffer.com/shortlink/question
+        // 删除短链接后，布隆过滤器如何删除？
         shortUriCreateCachePenetrationBloomFilter.add(fullShortUrl);
         return ShortLinkCreateRespDTO.builder()
                 .fullShortUrl("http://" + shortLinkDO.getFullShortUrl())
@@ -172,7 +164,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     }
 
     @Override
-    public ShortLinkCreateRespDTO createShortLinkByLock(ShortLinkCreateReqDTO requestParam) {
+    public ShortLinkCreateRespDTO
+    createShortLinkByLock(ShortLinkCreateReqDTO requestParam) {
         verificationWhitelist(requestParam.getOriginUrl());
         String fullShortUrl;
         // 为什么说布隆过滤器性能远胜于分布式锁？详情查看：https://nageoffer.com/shortlink/question
@@ -266,6 +259,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         if (hasShortLinkDO == null) {
             throw new ClientException("短链接记录不存在");
         }
+        //如果分組id不更改
         if (Objects.equals(hasShortLinkDO.getGid(), requestParam.getGid())) {
             LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
                     .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
@@ -300,6 +294,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 ShortLinkDO delShortLinkDO = ShortLinkDO.builder()
                         .delTime(System.currentTimeMillis())
                         .build();
+                //将原始短链接设为已删除
                 delShortLinkDO.setDelFlag(1);
                 baseMapper.update(delShortLinkDO, linkUpdateWrapper);
                 ShortLinkDO shortLinkDO = ShortLinkDO.builder()
@@ -320,6 +315,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .delTime(0L)
                         .build();
                 baseMapper.insert(shortLinkDO);
+                //修改Goto表完整短链接和分组id的关系
                 LambdaQueryWrapper<ShortLinkGotoDO> linkGotoQueryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl, requestParam.getFullShortUrl())
                         .eq(ShortLinkGotoDO::getGid, hasShortLinkDO.getGid());
@@ -353,6 +349,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             result.setDomain("http://" + result.getDomain());
             return result;
         });
+    }
+
+    @Override
+    public IPage<ShortLinkPageRespDTO> pageShortLinkTest(ShortLinkPageReqDTO requestParm) {
+        LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
+                .eq(ShortLinkDO::getGid, requestParm.getGid())
+                .eq(ShortLinkDO::getDelFlag, 0);
+        IPage<ShortLinkDO> resultPage = baseMapper.selectPage(requestParm, queryWrapper);
+        return resultPage.convert(each -> BeanUtil.toBean(each , ShortLinkPageRespDTO.class));
     }
 
     @Override
@@ -568,8 +573,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             throw new ClientException("跳转链接填写错误");
         }
         List<String> details = gotoDomainWhiteListConfiguration.getDetails();
-        if (!details.contains(domain)) {
+        /*if (!details.contains(domain)) {
             throw new ClientException("演示环境为避免恶意攻击，请生成以下网站跳转链接：" + gotoDomainWhiteListConfiguration.getNames());
-        }
+        }*/
     }
 }
